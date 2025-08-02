@@ -23,7 +23,7 @@ document.getElementById('login').onclick = async () => {
   const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
     .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 
-  sessionStorage.setItem('verifier', verifier);
+  localStorage.setItem('verifier', verifier);
   location = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}` +
              `&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}` +
              `&code_challenge_method=S256&code_challenge=${codeChallenge}`;
@@ -42,7 +42,7 @@ async function main() {
     code: new URLSearchParams(location.search).get('code'),
     redirect_uri: redirectUri,
     client_id: clientId,
-    code_verifier: sessionStorage.getItem('verifier')
+    code_verifier: localStorage.getItem('verifier')
   });
 
   const r = await fetch('https://accounts.spotify.com/api/token', {
