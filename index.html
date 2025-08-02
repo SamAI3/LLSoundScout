@@ -13,7 +13,7 @@
 
 <script>
 const clientId = 'da1c172c19894c75b797b761cb2554df';
-const redirectUri = location.origin + location.pathname;
+const redirectUri = 'https://samai3.github.io/LLSoundScout/';
 const scopes = 'user-top-read user-library-read playlist-modify-public';
 const api = new SpotifyWebApi();
 
@@ -37,12 +37,15 @@ window.onload = () => {
 async function main() {
   document.getElementById('login').classList.add('hidden');
 
+  const code = new URLSearchParams(location.search).get('code');
+  const verifier = localStorage.getItem('verifier');
+
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
-    code: new URLSearchParams(location.search).get('code'),
+    code,
     redirect_uri: redirectUri,
     client_id: clientId,
-    code_verifier: localStorage.getItem('verifier')
+    code_verifier: verifier
   });
 
   const r = await fetch('https://accounts.spotify.com/api/token', {
@@ -50,6 +53,14 @@ async function main() {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body
   });
+
+  if (!r.ok) {
+    const err = await r.text();
+    console.error('Token request failed:', err);
+    alert("Kon geen toegangstoken verkrijgen. Check of je redirect URI in Spotify Developer Dashboard exact overeenkomt.");
+    return;
+  }
+
   const { access_token } = await r.json();
   api.setAccessToken(access_token);
 
