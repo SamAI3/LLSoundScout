@@ -11,10 +11,8 @@
   <div id="tips" class="space-y-1"></div>
   <button id="playlist" class="hidden p-3 bg-blue-600 text-white rounded">Maak playlist</button>
 
-<script type="module">
-import lineup from './lowlands2025.json' assert {type: 'json'};
-
-const clientId = da1c172c19894c75b797b761cb2554df; //
+<script>
+const clientId = 'da1c172c19894c75b797b761cb2554df';
 const redirectUri = location.origin + location.pathname;
 const scopes = 'user-top-read user-library-read playlist-modify-public';
 const api = new SpotifyWebApi();
@@ -33,17 +31,26 @@ document.getElementById('login').onclick = async () => {
 
 if (new URLSearchParams(location.search).get('code')) {
   document.getElementById('login').classList.add('hidden');
+
   const body = new URLSearchParams({
-      grant_type:'authorization_code',
-      code: new URLSearchParams(location.search).get('code'),
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      code_verifier: sessionStorage.getItem('verifier')
+    grant_type: 'authorization_code',
+    code: new URLSearchParams(location.search).get('code'),
+    redirect_uri: redirectUri,
+    client_id: clientId,
+    code_verifier: sessionStorage.getItem('verifier')
   });
+
   const r = await fetch('https://accounts.spotify.com/api/token', {
-    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body});
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
   const { access_token } = await r.json();
   api.setAccessToken(access_token);
+
+  // Laad de line-up JSON
+  const response = await fetch('./lowlands2025.json');
+  const lineup = await response.json();
 
   const top = await api.getMyTopArtists({ limit: 50 });
   const liked = await api.getMySavedTracks({ limit: 50 });
@@ -59,29 +66,34 @@ if (new URLSearchParams(location.search).get('code')) {
     const artist = art.artists.items[0];
     const overlap = artist.genres.filter(g => top.items.some(f => f.genres.includes(g))).length;
     const tr = await api.searchTracks(`artist:${act}`, { limit: 2 });
-    tips.push({ act, genre: artist.genres[0] || 'onbekend', overlap,
-                uris: tr.tracks.items.map(t => t.uri) });
+    tips.push({
+      act,
+      genre: artist.genres[0] || 'onbekend',
+      overlap,
+      uris: tr.tracks.items.map(t => t.uri)
+    });
   }
-  tips.sort((a,b)=>b.overlap-a.overlap);
-  const keep = tips.slice(0,30);
+
+  tips.sort((a, b) => b.overlap - a.overlap);
+  const keep = tips.slice(0, 30);
 
   const list = document.getElementById('tips');
-  keep.forEach((t,i)=>{
+  keep.forEach((t, i) => {
     const li = document.createElement('div');
-    li.textContent = `${i+1}. ${t.act} – ${t.genre} • Deelt genre met jouw favorieten.`;
+    li.textContent = `${i + 1}. ${t.act} – ${t.genre} • Deelt genre met jouw favorieten.`;
     list.append(li);
   });
 
-  const uris = keep.flatMap(t=>t.uris);
+  const uris = keep.flatMap(t => t.uris);
   const plBtn = document.getElementById('playlist');
   plBtn.classList.remove('hidden');
-  plBtn.onclick = async ()=>{
+  plBtn.onclick = async () => {
     const me = await api.getMe();
-    const pl = await api.createPlaylist(me.id, { name:'Lowlands-tips 2025' });
-    for (let i=0;i<uris.length;i+=100) {
-      await api.addTracksToPlaylist(pl.id, uris.slice(i,i+100));
+    const pl = await api.createPlaylist(me.id, { name: 'Lowlands-tips 2025' });
+    for (let i = 0; i < uris.length; i += 100) {
+      await api.addTracksToPlaylist(pl.id, uris.slice(i, i + 100));
     }
-    window.open(pl.external_urls.spotify,'_blank');
+    window.open(pl.external_urls.spotify, '_blank');
   };
 }
 </script>
