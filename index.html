@@ -21,7 +21,7 @@ document.getElementById('login').onclick = async () => {
   const verifier = crypto.randomUUID().replace(/-/g, '');
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
   const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
-        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 
   sessionStorage.setItem('verifier', verifier);
   location = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}` +
@@ -29,7 +29,12 @@ document.getElementById('login').onclick = async () => {
              `&code_challenge_method=S256&code_challenge=${codeChallenge}`;
 };
 
-if (new URLSearchParams(location.search).get('code')) {
+window.onload = () => {
+  if (!new URLSearchParams(location.search).get('code')) return;
+  main();
+};
+
+async function main() {
   document.getElementById('login').classList.add('hidden');
 
   const body = new URLSearchParams({
@@ -48,7 +53,6 @@ if (new URLSearchParams(location.search).get('code')) {
   const { access_token } = await r.json();
   api.setAccessToken(access_token);
 
-  // Laad de line-up JSON
   const response = await fetch('./lowlands2025.json');
   const lineup = await response.json();
 
