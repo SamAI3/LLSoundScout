@@ -16,31 +16,39 @@ const clientId = 'da1c172c19894c75b797b761cb2554df';
 const redirectUri = 'https://samai3.github.io/LLSoundScout/';
 const scopes = 'user-top-read user-library-read playlist-modify-public';
 const api = new SpotifyWebApi();
-let verifierGlobal = null;
 
 document.getElementById('login').onclick = async () => {
   const verifier = crypto.randomUUID().replace(/-/g, '');
-  verifierGlobal = verifier; // tijdelijk in variabele
-
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
   const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
     .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 
-  // Plaats verifier in URL fragment zodat je 'm kunt hergebruiken
-  location = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}` +
-             `&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}` +
-             `&code_challenge_method=S256&code_challenge=${codeChallenge}&state=${verifier}`;
+  sessionStorage.setItem('verifier', verifier); // ✅ tijdelijk bewaren
+
+  const authUrl = `https://accounts.spotify.com/authorize` +
+                  `?response_type=code` +
+                  `&client_id=${clientId}` +
+                  `&scope=${encodeURIComponent(scopes)}` +
+                  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+                  `&code_challenge_method=S256` +
+                  `&code_challenge=${codeChallenge}`;
+  location.href = authUrl;
 };
 
 window.onload = () => {
-  const urlParams = new URLSearchParams(location.search);
-  const code = urlParams.get('code');
-  const verifier = urlParams.get('state'); // ophalen uit state
-  if (code && verifier) main(code, verifier);
+  const code = new URLSearchParams(location.search).get('code');
+  if (code) main(code);
 };
 
-async function main(code, verifier) {
+async function main(code) {
   document.getElementById('login').classList.add('hidden');
+
+  const verifier = sessionStorage.getItem('verifier'); // ✅ ophalen
+
+  if (!verifier) {
+    alert("Verifier ontbreekt. Probeer opnieuw in te loggen.");
+    return;
+  }
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
