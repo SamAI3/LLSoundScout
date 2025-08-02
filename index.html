@@ -17,36 +17,33 @@ const redirectUri = 'https://samai3.github.io/LLSoundScout/';
 const scopes = 'user-top-read user-library-read playlist-modify-public';
 const api = new SpotifyWebApi();
 
+// 1. Inloggen
 document.getElementById('login').onclick = async () => {
   const verifier = crypto.randomUUID().replace(/-/g, '');
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
   const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
     .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 
-  sessionStorage.setItem('verifier', verifier); // ✅ tijdelijk bewaren
-
-  const authUrl = `https://accounts.spotify.com/authorize` +
-                  `?response_type=code` +
-                  `&client_id=${clientId}` +
-                  `&scope=${encodeURIComponent(scopes)}` +
-                  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                  `&code_challenge_method=S256` +
-                  `&code_challenge=${codeChallenge}`;
+  sessionStorage.setItem('verifier', verifier);  // NIET localStorage!
+  const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge_method=S256&code_challenge=${codeChallenge}`;
   location.href = authUrl;
 };
 
+// 2. Callback na login
 window.onload = () => {
   const code = new URLSearchParams(location.search).get('code');
-  if (code) main(code);
+  if (code) {
+    main(code);
+  }
 };
 
 async function main(code) {
   document.getElementById('login').classList.add('hidden');
 
-  const verifier = sessionStorage.getItem('verifier'); // ✅ ophalen
+  const verifier = sessionStorage.getItem('verifier'); // Moet beschikbaar zijn!
 
   if (!verifier) {
-    alert("Verifier ontbreekt. Probeer opnieuw in te loggen.");
+    alert("PKCE-verificatie mislukt. Probeer opnieuw in te loggen.");
     return;
   }
 
@@ -65,17 +62,16 @@ async function main(code) {
   });
 
   if (!r.ok) {
-    const err = await r.text();
-    console.error('Token request failed:', err);
-    alert("Kon geen toegangstoken verkrijgen. Check of je redirect URI in Spotify Developer Dashboard exact overeenkomt.");
+    const error = await r.text();
+    console.error("Token request failed:", error);
+    alert("Kon geen toegangstoken verkrijgen. Controleer of redirect URI exact klopt.");
     return;
   }
 
   const { access_token } = await r.json();
   api.setAccessToken(access_token);
 
-  const response = await fetch('./lowlands2025.json');
-  const lineup = await response.json();
+  const lineup = await fetch('./lowlands2025.json').then(r => r.json());
 
   const top = await api.getMyTopArtists({ limit: 50 });
   const liked = await api.getMySavedTracks({ limit: 50 });
